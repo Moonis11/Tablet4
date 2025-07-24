@@ -17,3 +17,7 @@ webrtcvad>=2.0.10
 av>=10.0.0
 streamlit-webrtc>=0.60.0
 openai-whisper>=1.1.10
+
+# 🔊 Audio transkripsiya uchun kerakli kutubxonalar:
+faster-whisper
+ctranslate2
