@@ -14,13 +14,7 @@ from theme_manager import get_theme_css
 from streamlit_webrtc import webrtc_streamer
 import uuid
 from streamlit_extras.switch_page_button import switch_page
-import zipfile
-import os
 
-# ZIPdagi rasm papkasini ochish
-if not os.path.exists("images"):
-    with zipfile.ZipFile("images.zip", 'r') as zip_ref:
-        zip_ref.extractall("images")
 
 
 # st.set_page_config(page_title="Tablet AI", layout="wide")
