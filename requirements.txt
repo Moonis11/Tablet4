@@ -21,3 +21,4 @@ openai-whisper>=1.1.10
 # 🔊 Audio transkripsiya uchun kerakli kutubxonalar:
 faster-whisper
 ctranslate2
+streamlit-extras
