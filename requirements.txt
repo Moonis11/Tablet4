@@ -22,3 +22,6 @@ openai-whisper>=1.1.10
 faster-whisper
 ctranslate2
 streamlit-extras
+
+streamlit-javascript
+
