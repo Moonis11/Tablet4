@@ -206,13 +206,12 @@ if "user_lat" in st.session_state and "user_lon" in st.session_state:
 # Masofa va narx bo‘yicha saralash
 top_20 = mos_qatorlar.sort_values(["clean_narx", "masofa_km"]).head(20)
 
-@st.cache_data
+# @st.cache_data olib tashlandi
 def load_data():
     df = pd.read_csv("APTEKA.csv", encoding="utf-8-sig")
     df = df.loc[:, ~df.columns.str.contains("^Unnamed")]
     df.columns = df.columns.str.strip()
 
-    # Narx tozalash
     def to_number(x):
         try:
             return int(str(x).replace(" ", "").split(".")[0])
@@ -222,6 +221,7 @@ def load_data():
     return df
 
 df = load_data()
+
 #st.title("📍 Dori mavjud aptekalar ro'yxati")
 
 def clean_key(text):
