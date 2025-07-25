@@ -24,4 +24,5 @@ ctranslate2
 streamlit-extras
 
 streamlit-javascript
+geopy
 
