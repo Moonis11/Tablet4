@@ -508,24 +508,22 @@ with st.container():
                 async_processing=True
             )
 
-            # ▶️ Start va ❌ O'chirish tugmalari
-            col_x, col_y = st.columns([1, 1])
-            with col_x:
-                # ⬅️ Bosh sahifaga qaytish tugmasi
-                if st.button("🏠 Bosh sahifa", key="home_voice_btn"):
-                    st.session_state["mode"] = None          # Joriy rejimni bekor qilamiz
-                    st.switch_page("pages/home.py")                # Asosiy sahifaga o‘tamiz
+            if ctx.audio_processor:
+                result = ctx.audio_processor.transcribe()
+                if result:
+                    st.session_state["last_transcript"] = result
+                    st.session_state["last_result"] = get_drug_info_from_csv(result)
 
-            with col_y:
-                if st.button("❌ O'chirish", key="clear_voice_button"):
-                    st.session_state.pop("last_transcript", None)
-                    st.session_state.pop("last_result", None)
-                    st.rerun()
-
-            # ✍️ Matnni ko‘rsatish
+            st.markdown("#### 📋 matn:")
             if "last_transcript" in st.session_state:
-                st.markdown("### 📝 Tan olingan matn:")
                 st.success(st.session_state["last_transcript"])
+            # else:
+            #     st.info("🎤 Iltimos, gapiring yoki ovoz yozilishini kuting...")
+
+            if st.button("❌ Tozalash"):
+                st.session_state.pop("last_transcript", None)
+                st.session_state.pop("last_result", None)
+                st.rerun()
 
         # 📄 O‘ngda dori ma’lumoti
         with col2:
