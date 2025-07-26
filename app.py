@@ -509,9 +509,8 @@ with st.container():
             )
 
             # 👉 Faqat 5 sekund jimlikdan so‘ng transkripsiya qilish
-            if ctx.state == ctx.State.ACTIVE and ctx.audio_processor:
-                if ctx.audio_processor.is_done():
-                    result = ctx.audio_processor.transcribe()
+            if ctx.state == "ACTIVE" and ctx.audio_processor:
+                result = ctx.audio_processor.transcribe()
                     if result:
                         st.session_state["last_transcript"] = result
                         st.session_state["last_result"] = get_drug_info_from_csv(result)
