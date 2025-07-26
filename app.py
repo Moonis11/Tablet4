@@ -494,41 +494,42 @@ with st.container():
 
 
     def render_voice_mode():
-        st.header("🎙️ " + translations["drug_name"][lang])
+        
 
-        col1, col2 = st.columns([0.5, 0.5])
+        col1, col2 = st.columns([1, 1])
 
         with col1:
-            # 🎙️ Ovoz yozish
-            st.markdown("## 🔴 Ovoz yozish")
+            st.markdown("### 🔴 Ovoz yozish")
+
             ctx = webrtc_streamer(
-                key="speech",
+                key="speech-mode",
                 audio_processor_factory=AudioProcessor,
                 media_stream_constraints={"video": False, "audio": True},
                 async_processing=True
             )
 
-            if ctx.audio_processor:
-                result = ctx.audio_processor.transcribe()
-                if result:
-                    st.session_state["last_transcript"] = result
-                    st.session_state["last_result"] = get_drug_info_from_csv(result)
+            # 👉 Faqat 5 sekund jimlikdan so‘ng transkripsiya qilish
+            if ctx.state == ctx.State.ACTIVE and ctx.audio_processor:
+                if ctx.audio_processor.is_done():
+                    result = ctx.audio_processor.transcribe()
+                    if result:
+                        st.session_state["last_transcript"] = result
+                        st.session_state["last_result"] = get_drug_info_from_csv(result)
+                        st.rerun()  # Sahifani yangilab, natijani ko‘rsatamiz
 
-            st.markdown("#### 📋 matn:")
+            st.markdown("#### 📋 Matn:")
             if "last_transcript" in st.session_state:
                 st.success(st.session_state["last_transcript"])
-            # else:
-            #     st.info("🎤 Iltimos, gapiring yoki ovoz yozilishini kuting...")
 
             if st.button("❌ Tozalash"):
                 st.session_state.pop("last_transcript", None)
                 st.session_state.pop("last_result", None)
                 st.rerun()
 
-        # 📄 O‘ngda dori ma’lumoti
         with col2:
-            if "last_result" in st.session_state and st.session_state["last_result"]:
-                render_drug_info(st.session_state["last_result"])
+            if "last_result" in st.session_state and st.session_state["last_result"] is not None:
+                st.markdown("### 💊 Dori ma’lumoti:")
+                st.dataframe(st.session_state["last_result"], use_container_width=True)
 
 
 
@@ -753,3 +754,33 @@ with col5:
     if st.button("➡️", key="next_btn") and st.session_state["cheap_page"] < total_pages - 1:
         st.session_state["cheap_page"] += 1
         st.rerun()
+import streamlit as st
+from streamlit_javascript import st_javascript
+from geopy.geocoders import Nominatim
+
+st.set_page_config(page_title="Tablet App", layout="wide")
+st.sidebar.title("🚀 Navigatsiya")
+page = st.sidebar.radio("Bo‘limni tanlang", ["🏠 Bosh sahifa", "📍 Lokatsiya", "💊 Dori qidiruv", "📦 Buyurtma"])
+
+if page == "📍 Lokatsiya":
+    st.title("📍 Lokatsiya aniqlash")
+
+    coords = st_javascript(
+        "await new Promise((resolve, reject) => navigator.geolocation.getCurrentPosition("
+        "loc => resolve([loc.coords.latitude, loc.coords.longitude]), "
+        "err => reject(err)))"
+    )
+
+    if coords:
+        lat, lon = coords
+        st.success(f"🧭 Koordinatalar: {lat}, {lon}")
+
+        geolocator = Nominatim(user_agent="tablet-app")
+        location = geolocator.reverse((lat, lon), language="en")
+
+        if location and location.address:
+            st.info(f"📍 Siz joylashgan manzil:\n\n{location.address}")
+        else:
+            st.warning("❗ Manzil aniqlanmadi.")
+    else:
+        st.error("📡 Lokatsiyani olish imkoni bo‘lmadi. Brauzerga ruxsat bering.")
