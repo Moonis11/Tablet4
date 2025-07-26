@@ -511,10 +511,10 @@ with st.container():
             # 👉 Faqat 5 sekund jimlikdan so‘ng transkripsiya qilish
             if ctx.state == "ACTIVE" and ctx.audio_processor:
                 result = ctx.audio_processor.transcribe()
-                    if result:
-                        st.session_state["last_transcript"] = result
-                        st.session_state["last_result"] = get_drug_info_from_csv(result)
-                        st.rerun()  # Sahifani yangilab, natijani ko‘rsatamiz
+                if result:
+                    st.session_state["last_transcript"] = result
+                    st.session_state["last_result"] = get_drug_info_from_csv(result)
+                    st.rerun()  # Sahifani yangilab, natijani ko‘rsatamiz
 
             st.markdown("#### 📋 Matn:")
             if "last_transcript" in st.session_state:
