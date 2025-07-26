@@ -17,7 +17,12 @@ from streamlit_extras.switch_page_button import switch_page
 
 
 
-# st.set_page_config(page_title="Tablet AI", layout="wide")
+# Sahifa sozlamasi
+st.set_page_config(
+    page_title="TabletAI - Dori tanib olish",
+    layout="centered",  # mobilga eng yaxshi variant
+    initial_sidebar_state="collapsed"
+)
 
 
 df = pd.read_csv("alternativa1.csv")
