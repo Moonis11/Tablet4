@@ -421,8 +421,25 @@ with st.container():
 
         # ✅ Fayl yuklanmagan bo‘lsa — file_uploader ko‘rinadi
         if "uploaded_image" not in st.session_state or st.session_state["uploaded_image"] is None:
+            st.markdown("""
+            <style>
+            /* --- "Drag and drop file here" yozuvini yashirish --- */
+            div[data-testid="stFileUploadDropzoneInstructions"] > div,
+            div[data-testid="stFileDropzoneInstructions"] > div {
+                visibility: hidden;
+                position: relative;
+            }
+
+            /* Fayl limiti va format yozuvlarini yashirish */
+            div[data-testid="stFileUploadFileSizeLimit"],
+            div[data-testid="stFileUploaderFileSizeLimit"],
+            small {
+                display: none !important;
+            }
+            </style>
+        """, unsafe_allow_html=True)
             uploaded = st.file_uploader(
-                label="📤 Rasm yuklang",
+                label=" ",
                 type=["png", "jpg", "jpeg"],
                 key=st.session_state["uploader_key"],
                 label_visibility="visible"
@@ -514,12 +531,13 @@ with st.container():
             )
 
             # 👉 Faqat 5 sekund jimlikdan so‘ng transkripsiya qilish
-            if ctx.state == "ACTIVE" and ctx.audio_processor:
-                result = ctx.audio_processor.transcribe()
-                if result:
-                    st.session_state["last_transcript"] = result
-                    st.session_state["last_result"] = get_drug_info_from_csv(result)
-                    st.rerun()  # Sahifani yangilab, natijani ko‘rsatamiz
+            if ctx.state == ctx.State.ACTIVE and ctx.audio_processor:
+                if ctx.audio_processor.is_done():
+                    result = ctx.audio_processor.transcribe()
+                    if result:
+                        st.session_state["last_transcript"] = result
+                        st.session_state["last_result"] = get_drug_info_from_csv(result)
+                        st.rerun()  # Sahifani yangilab, natijani ko‘rsatamiz
 
             st.markdown("#### 📋 Matn:")
             if "last_transcript" in st.session_state:
@@ -652,7 +670,13 @@ df = load_data(last_modified)
 
 
 
-st.title("📍 Dori mavjud aptekalar ro'yxati")
+#st.title("📍 Dori mavjud aptekalar ro'yxati")
+# 🔐 Har doim kerakli session_state kalitlarini boshlab qo‘yish
+# Session state ni boshlash
+for key in ["main_page", "tanlangan_dori", "last_result"]:
+    if key not in st.session_state:
+        st.session_state[key] = 0 if "page" in key else ""
+
 
 result = st.session_state.get("last_result", "")
 if isinstance(result, dict):
@@ -672,7 +696,9 @@ def normalize_name(name):
     return str(name).strip().lower()
 
 # Guruhlashdan oldin normalizatsiya qilingan ustun qo‘shamiz
-mos_aptekalar["Dori nomi clean"] = mos_aptekalar["Dori nomi"].apply(normalize_name)
+if mos_aptekalar is not None and not mos_aptekalar.empty and "Dori nomi" in mos_aptekalar.columns:
+    mos_aptekalar["Dori nomi clean"] = mos_aptekalar["Dori nomi"].apply(normalize_name)
+
     # 🔁 Dori nomi va turi bo‘yicha guruhlash (faqat noyoblar)
 if not mos_aptekalar.empty:
     # 🧮 Guruhlash: dori nomi bo‘yicha necha aptekada va minimal narx
@@ -689,16 +715,18 @@ if not mos_aptekalar.empty:
             "Narxi (taxminiy)": "Minimal narxi"
         })
     )
-
+    
     # 🔢 Sahifalash parametrlari
     items_per_page = 5
-    if "cheap_page" not in st.session_state:
-        st.session_state["cheap_page"] = 0
+    if "main_page" not in st.session_state:
+        st.session_state["main_page"] = 0
+    if "tanlangan_dori" not in st.session_state:
+       st.session_state["tanlangan_dori"] = ""
 
     total_items = len(guruhlangan)
     total_pages = (total_items + items_per_page - 1) // items_per_page
 
-    start_idx = st.session_state["cheap_page"] * items_per_page
+    start_idx = st.session_state["main_page"] * items_per_page
     end_idx = min(start_idx + items_per_page, total_items)
     current_page_data = guruhlangan.iloc[start_idx:end_idx]
 
@@ -739,52 +767,22 @@ if not mos_aptekalar.empty:
             if st.button("📍 Dorixona ro‘yxati", key=f"dorixona_{i}", use_container_width=True):
                 st.session_state["tanlangan_dori"] = dori_nomi
                 st.switch_page("pages/locatsiya.py")
-
+if not mos_aptekalar.empty:
    # Sahifa tugmalari uchun ustunlar
-col1, col2, col3, col4, col5,col6 = st.columns([2.1,1, 2, 0.5, 1.7, 1])
+    col1, col2, col3, col4, col5,col6 = st.columns([2.1,1, 2, 0.5, 1.7, 1])
 
-with col2:
-    if st.button("⬅️", key="prev_btn") and st.session_state["cheap_page"] > 0:
-        st.session_state["cheap_page"] -= 1
-        st.rerun()
+    with col2:
+        if st.button("⬅️", key="prev_btn") and st.session_state["main_page"] > 0:
+            st.session_state["main_page"] -= 1
+            st.rerun()
 
-with col3:
-    st.markdown(
-        f"<div style='text-align: center; font-size: 18px;'><b>{st.session_state['cheap_page'] + 1} / {total_pages}</b></div>",
-        unsafe_allow_html=True
-    )
+    with col3:
+        st.markdown(
+            f"<div style='text-align: center; font-size: 18px;'><b>{st.session_state['main_page'] + 1} / {total_pages}</b></div>",
+            unsafe_allow_html=True
+        )
 
-with col5:
-    if st.button("➡️", key="next_btn") and st.session_state["cheap_page"] < total_pages - 1:
-        st.session_state["cheap_page"] += 1
-        st.rerun()
-import streamlit as st
-from streamlit_javascript import st_javascript
-from geopy.geocoders import Nominatim
-
-st.set_page_config(page_title="Tablet App", layout="wide")
-st.sidebar.title("🚀 Navigatsiya")
-page = st.sidebar.radio("Bo‘limni tanlang", ["🏠 Bosh sahifa", "📍 Lokatsiya", "💊 Dori qidiruv", "📦 Buyurtma"])
-
-if page == "📍 Lokatsiya":
-    st.title("📍 Lokatsiya aniqlash")
-
-    coords = st_javascript(
-        "await new Promise((resolve, reject) => navigator.geolocation.getCurrentPosition("
-        "loc => resolve([loc.coords.latitude, loc.coords.longitude]), "
-        "err => reject(err)))"
-    )
-
-    if coords:
-        lat, lon = coords
-        st.success(f"🧭 Koordinatalar: {lat}, {lon}")
-
-        geolocator = Nominatim(user_agent="tablet-app")
-        location = geolocator.reverse((lat, lon), language="en")
-
-        if location and location.address:
-            st.info(f"📍 Siz joylashgan manzil:\n\n{location.address}")
-        else:
-            st.warning("❗ Manzil aniqlanmadi.")
-    else:
-        st.error("📡 Lokatsiyani olish imkoni bo‘lmadi. Brauzerga ruxsat bering.")
+    with col5:
+        if st.button("➡️", key="next_btn") and st.session_state["main_page"] < total_pages - 1:
+            st.session_state["main_page"] += 1
+            st.rerun()
