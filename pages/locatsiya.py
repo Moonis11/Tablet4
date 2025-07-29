@@ -258,11 +258,29 @@ start_idx = st.session_state["cheap_page"] * items_per_page
 end_idx = start_idx + items_per_page
 page_df = filtered_df.iloc[start_idx:end_idx]
     
-for i, row in page_df.iterrows():
+from geopy.geocoders import Nominatim
+
+def get_address_from_coords(lat, lon):
+    try:
+        geolocator = Nominatim(user_agent="tablet_app")
+        location = geolocator.reverse((lat, lon), language="uz")
+        if location:
+            return location.address
+        return "Manzil topilmadi"
+    except Exception as e:
+        return f"Xatolik: {e}"
+
     
+for i, row in page_df.iterrows():
+
     dori_nomi = row.get("Dori nomi", "Nomaʼlum")
     narx = int(row.get("clean_narx", 0))
     narx_formatted = f"{narx:,.0f}".replace(",", " ")
+
+    # Lat va Lon dan manzil olish
+    lat = row.get("Latitude")
+    lon = row.get("Longitude")
+    manzil = get_address_from_coords(lat, lon) if lat and lon else "Manzil mavjud emas"
 
     apteka = row.get("Apteka nomi", "Nomaʼlum")
     telefon_raw = row.get("Telefon", "")
@@ -273,9 +291,10 @@ for i, row in page_df.iterrows():
         telefon = str(int(float(str(telefon_raw).replace(" ", "").replace("-", ""))))
     except:
         telefon = "Nomaʼlum"
-
+    ish_vaqti = row.get("ish_vaqti", "Ma'lumot yo'q")
     yaroqlik_muddati = row.get("Yaroqlik muddati", "kiritilmagan")
     omborda_mavjud = row.get("Omborda mavjudligi", "aniqlanmagan")
+    
     import base64
     def get_base64_image(image_path):
         try:
@@ -286,60 +305,87 @@ for i, row in page_df.iterrows():
     drug_icon = get_base64_image("images/drug_icon.png")
     with st.container(border=True):
         st.markdown(f"""
-            <div style="display: flex; align-items: center;
+        <div style="display: flex; align-items: center;
                         border-radius: 10px; padding: 20px;
                         font-size: 18px; margin-bottom: 10px;
                         ">
-                <img src="data:image/png;base64,{drug_icon}" width="60" height="60" style="margin-right: 20px;">
-                <div>  
-                    <b>{dori_nomi}</b><br>
-                    💰 Narxi: {narx_formatted} so'm<br>
-                    🏥 Dorixona: {apteka}<br>
-                    📞 Telefon: <a href="tel:{telefon}">{telefon}</a><br>
-                    📍 Masofa: {masofa:.2f} km<br>
-                    📅 Yaroqlik muddati: <i>{yaroqlik_muddati}</i><br>
-                    📦 Omborda mavjudligi: <i>{omborda_mavjud}</i>
-                </div>
+            <div style="display: flex; flex-direction: column; align-items: center; margin-right: 20px;">
+            <img src="data:image/png;base64,{drug_icon}" width="60" height="60" style="margin-right: 10px; border-radius: 10px;">
+            <div style="font-size: 22px; font-weight: bold; margin-top: 20px; 
+            text-align: center; width: 80px;">
+            {narx_formatted}
+            </div>
+            </div>
+            <div>
+               <b style="font-size: 20px; ">{dori_nomi}</b></br>
+                <div style="font-size: 14px;">
+                    <b>Dorixona:</b> {apteka} 
+                    <span style="margin-left: 16px;">⏰ {ish_vaqti}</span>
+                    <span style="margin-left: 16px;">📍 {masofa:.2f} km</span><br>
+                    📅 <b>Yaroqlilik muddati:</b> <i>{yaroqlik_muddati}</i>
+                    <span style="margin-left:15px;">
+                        📦 <i>{omborda_mavjud} ta qadoq mavjud</i>
+                    </span><br>
+                   📌 <b>Manzil:</b> <i>{manzil}</i><br>
             </div>
         """, unsafe_allow_html=True)
 
         key = f"buy_{clean_key(dori_nomi)}_{clean_key(apteka)}_{i}"
-        col1, col2 = st.columns(2)
-
-    with col1:
-        if st.button(" Tolovga o`tish", key=f"buy_{key}"):
-            item = {
-                "dori_nomi": row.get("Dori nomi", "Nomaʼlum"),
-                "narx": int(row.get("clean_narx", 0)),
-                "dorixona": row.get("Apteka nomi", "Nomaʼlum"),
-                "lat": row.get("Latitude"),
-                "lon": row.get("Longitude"),
-                "vaqt": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
-                "yaroqlik_muddati": row.get("Yaroqlik muddati", "kiritilmagan"),
-                "omborda_mavjud": row.get("Omborda mavjudligi", "aniqlanmagan"),
-                "masofa_km": float(row.get("masofa_km", 0))
-            }
-
-            st.session_state["cart"].append(item)
-            #st.session_state["tanlangan_dori"] = row.to_dict()
-            st.switch_page("pages/pay.py")
-
-    with col2:
-        if st.button(" Savatga qo‘shish", key=f"savat_{i}"):
-            item = {
-                "dori_nomi": row.get("Dori nomi", "Nomaʼlum"),
-                "narx": int(row.get("clean_narx", 0)),
-                "dorixona": row.get("Apteka nomi", "Nomaʼlum"),
-                "lat": row.get("Latitude"),
-                "lon": row.get("Longitude"),
-                "vaqt": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
-                "yaroqlik_muddati": row.get("Yaroqlik muddati", "kiritilmagan"),
-                "omborda_mavjud": row.get("Omborda mavjudligi", "aniqlanmagan"),
-                "masofa_km": float(row.get("masofa_km", 0))
-            }
-
-            st.session_state["cart"].append(item)
-            st.success("✅ Savatga qo‘shildi!")
+        col1, col2, col3, col4,col5 = st.columns(5)
+ 
+        with col1:
+            if st.button("💳", key=f"buy_{key}"):
+                item = {
+                    "dori_nomi": row.get("Dori nomi", "Nomaʼlum"),
+                    "narx": int(row.get("clean_narx", 0)),
+                    "dorixona": row.get("Apteka nomi", "Nomaʼlum"),
+                    "lat": row.get("Latitude"),
+                    "lon": row.get("Longitude"),
+                    "vaqt": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+                    "yaroqlik_muddati": row.get("Yaroqlik muddati", "kiritilmagan"),
+                    "omborda_mavjud": row.get("Omborda mavjudligi", "aniqlanmagan"),
+                    "masofa_km": float(row.get("masofa_km", 0))
+                }
+                if "cart" not in st.session_state:
+                    st.session_state["cart"] = []
+                st.session_state["cart"].append(item)
+                # st.session_state["tanlangan_dori"] = row.to_dict()
+                st.switch_page("pages/pay.py")
+        with col3:
+                st.markdown(f"""
+                    <a href="tel:{telefon}" target="_blank">
+                        <button style="
+                            background:#12202D;
+                            color:white;
+                            border:none;
+                            padding:10px 14px;
+                            border-radius:18px;
+                            font-size:16px;
+                            cursor:pointer;
+                            width:100%;
+                        ">
+                            📞
+                        </button>
+                    </a>
+                """, unsafe_allow_html=True)
+        with col5:
+            if st.button("🛒", key=f"savat_{i}"):
+                item = {
+                    "dori_nomi": row.get("Dori nomi", "Nomaʼlum"),
+                    "narx": int(row.get("clean_narx", 0)),
+                    "dorixona": row.get("Apteka nomi", "Nomaʼlum"),
+                    "lat": row.get("Latitude"),
+                    "lon": row.get("Longitude"),
+                    "vaqt": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+                    "yaroqlik_muddati": row.get("Yaroqlik muddati", "kiritilmagan"),
+                    "omborda_mavjud": row.get("Omborda mavjudligi", "aniqlanmagan"),
+                    "masofa_km": float(row.get("masofa_km", 0))
+                }
+             
+                if "cart" not in st.session_state:
+                    st.session_state["cart"] = []
+                st.session_state["cart"].append(item)
+                st.success("✅ Savatga qo‘shildi!")
           
 col2, col3 = st.columns(2)
 
